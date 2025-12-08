@@ -1,0 +1,74 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: DynamoDB setup for e-commerce app in Learner Lab (Products, Cart, Orders)
+
+Resources:
+  ProductsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: Products
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: productId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: productId
+          KeyType: HASH
+      Tags:
+        - Key: Environment
+          Value: LearnerLab
+        - Key: Project
+          Value: Ecommerce
+
+  CartTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: Cart
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+        - AttributeName: productId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+        - AttributeName: productId
+          KeyType: RANGE
+      Tags:
+        - Key: Environment
+          Value: LearnerLab
+        - Key: Project
+          Value: Ecommerce
+
+  OrdersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: Orders
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: orderId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: orderId
+          KeyType: HASH
+      Tags:
+        - Key: Environment
+          Value: LearnerLab
+        - Key: Project
+          Value: Ecommerce
+
+Outputs:
+  ProductsTableName:
+    Value: !Ref ProductsTable
+    Export:
+      Name: ProductsTableName
+
+  CartTableName:
+    Value: !Ref CartTable
+    Export:
+      Name: CartTableName
+
+  OrdersTableName:
+    Value: !Ref OrdersTable
+    Export:
+      Name: OrdersTableName

@@ -1,0 +1,129 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Cognito setup for e-commerce app with separate login for users and store managers (Learner Lab safe)
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: ecommerce
+    Description: Prefix for Cognito resources
+
+Resources:
+  # User Pool
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub '${ProjectName}-user-pool'
+      UsernameAttributes:
+        - email
+      AutoVerifiedAttributes:
+        - email
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 6
+          RequireLowercase: true
+          RequireNumbers: false
+          RequireSymbols: false
+          RequireUppercase: false
+      Schema:
+        - Name: role
+          AttributeDataType: String
+          Mutable: true
+          Required: false
+          StringAttributeConstraints:
+            MinLength: 4
+            MaxLength: 20
+
+  # App Client for normal users
+  UserPoolClientUsers:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId: !Ref UserPool
+      ClientName: !Sub '${ProjectName}-users-client'
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+        - ALLOW_USER_SRP_AUTH
+      AccessTokenValidity: 60
+      IdTokenValidity: 60
+      TokenValidityUnits:
+        AccessToken: minutes
+        IdToken: minutes
+        RefreshToken: days
+      SupportedIdentityProviders:
+        - COGNITO
+      CallbackURLs:
+        - 'http://localhost:3000/users-login'
+      LogoutURLs:
+        - 'http://localhost:3000/users-logout'
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthFlows:
+        - code
+      AllowedOAuthScopes:
+        - email
+        - openid
+        - profile
+
+  # App Client for store managers / admins
+  UserPoolClientAdmins:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId: !Ref UserPool
+      ClientName: !Sub '${ProjectName}-admins-client'
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+        - ALLOW_USER_SRP_AUTH
+      AccessTokenValidity: 60
+      IdTokenValidity: 60
+      TokenValidityUnits:
+        AccessToken: minutes
+        IdToken: minutes
+        RefreshToken: days
+      SupportedIdentityProviders:
+        - COGNITO
+      CallbackURLs:
+        - 'http://localhost:3000/admin-login'
+      LogoutURLs:
+        - 'http://localhost:3000/admin-logout'
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthFlows:
+        - code
+      AllowedOAuthScopes:
+        - email
+        - openid
+        - profile
+
+  # Groups
+  AdminsGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties:
+      GroupName: admins
+      Description: Store managers / admins
+      UserPoolId: !Ref UserPool
+      Precedence: 1
+
+  UsersGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties:
+      GroupName: users
+      Description: Normal customers
+      UserPoolId: !Ref UserPool
+      Precedence: 2
+
+Outputs:
+  UserPoolId:
+    Value: !Ref UserPool
+    Export:
+      Name: !Sub '${ProjectName}-UserPoolId'
+
+  UserPoolClientIdUsers:
+    Value: !Ref UserPoolClientUsers
+    Export:
+      Name: !Sub '${ProjectName}-UserPoolClientIdUsers'
+
+  UserPoolClientIdAdmins:
+    Value: !Ref UserPoolClientAdmins
+    Export:
+      Name: !Sub '${ProjectName}-UserPoolClientIdAdmins'
