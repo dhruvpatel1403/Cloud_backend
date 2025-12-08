@@ -2,6 +2,7 @@ import express from "express";
 import {
   placeOrder,
   getUserOrders,
+  deleteOrder,
 //   updateOrderStatus,
 } from "../controllers/orderController.js";
 import isUser from "../middleware/authMiddleware.js";
@@ -12,7 +13,10 @@ const router = express.Router();
 router.post("/",isUser , placeOrder);
 
 // Get all orders for a user
-router.get("/:userId",isUser, getUserOrders);
+router.get("/",isUser, getUserOrders);
+
+router.delete("/:orderId", isUser, deleteOrder);
+
 
 // Update order status
 // router.put("/:orderId",isUser, updateOrderStatus);

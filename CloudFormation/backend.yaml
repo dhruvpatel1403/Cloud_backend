@@ -1,0 +1,136 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Deploy Node.js Backend on EC2 Ubuntu 22.04 with Node 18 + NVM + PM2"
+
+Parameters:
+  InstanceType:
+    Type: String
+    Default: t2.micro
+
+  KeyPairName:
+    Type: String
+    Default: ""
+    Description: "Optional EC2 KeyPair name"
+
+  LabRoleArn:
+    Type: String
+    Description: "IAM Role ARN with DynamoDB & Cognito access"
+
+  GitRepoUrl:
+    Type: String
+    Default: "https://github.com/dhruvpatel1403/Cloud_backend.git"
+
+  CognitoUserPoolId:
+    Type: String
+
+  CognitoClientIdUsers:
+    Type: String
+
+  CognitoClientIdAdmins:
+    Type: String
+
+  ProductsTable:
+    Type: String
+
+  OrdersTable:
+    Type: String
+
+  CartTable:
+    Type: String
+
+  AwsRegion:
+    Type: String
+    Default: "us-east-1"
+
+Conditions:
+  HasKeyPair: !Not [ !Equals [ !Ref KeyPairName, "" ] ]
+
+Resources:
+  BackendInstanceProfileUbuntu:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref LabRoleArn
+
+  BackendSecurityGroupUbuntu:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow HTTP (4000)
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 4000
+          ToPort: 4000
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+
+  BackendEC2Ubuntu:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      IamInstanceProfile: !Ref BackendInstanceProfileUbuntu
+      ImageId: ami-0a313d6098716f372
+      SecurityGroupIds:
+        - !Ref BackendSecurityGroupUbuntu
+      KeyName: !If
+        - HasKeyPair
+        - !Ref KeyPairName
+        - !Ref "AWS::NoValue"
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          set -e
+
+          apt-get update -y
+          apt-get install -y git curl build-essential
+
+          # Install NVM and Node 18
+          su - ubuntu <<'EOF'
+          curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+          export NVM_DIR="$HOME/.nvm"
+          [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+          nvm install 18
+          nvm use 18
+          npm install -g pm2
+          EOF
+
+          # Clone Repository
+          su - ubuntu <<'EOF'
+          mkdir -p ~/backend
+          cd ~/backend
+          git clone ${GitRepoUrl} app
+          EOF
+
+          # Create .env file
+          su - ubuntu <<'EOF'
+          cd ~/backend/app
+          cat > .env <<EOT
+          AWS_REGION=${AwsRegion}
+          COGNITO_USER_POOL_ID=${CognitoUserPoolId}
+          COGNITO_CLIENT_ID_USERS=${CognitoClientIdUsers}
+          COGNITO_CLIENT_ID_ADMINS=${CognitoClientIdAdmins}
+          PRODUCTS_TABLE=${ProductsTable}
+          ORDERS_TABLE=${OrdersTable}
+          CART_TABLE=${CartTable}
+          EOT
+          EOF
+
+          # Start Application
+          su - ubuntu <<'EOF'
+          export NVM_DIR="$HOME/.nvm"
+          [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+          
+          cd ~/backend/app
+          npm install
+          pm2 start src/app.js --name backend
+          pm2 save
+          EOF
+      Tags:
+        - Key: Name
+          Value: BackendUbuntuServer
+
+Outputs:
+  PublicIPUbuntu:
+    Description: "Backend Public IP"
+    Value: !GetAtt BackendEC2Ubuntu.PublicIp
