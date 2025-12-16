@@ -1,5 +1,6 @@
-import { PutCommand, GetCommand, DeleteCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
+import { PutCommand, GetCommand, DeleteCommand, QueryCommand,BatchGetCommand } from "@aws-sdk/lib-dynamodb";
 import ddb from "../dynamo.js";
+
 
 // --------------------- ADD OR UPDATE ITEMS IN CART ---------------------
 export const addToCart = async (req, res) => {
@@ -41,12 +42,13 @@ export const addToCart = async (req, res) => {
   }
 };
 
-// --------------------- GET USER CART ---------------------
+/* --------------------- GET USER CART WITH PRODUCT DETAILS --------------------- */
 export const getUserCart = async (req, res) => {
   try {
     const userId = req.user.userId;
 
-    const result = await ddb.send(
+    // 1️⃣ Get all cart items for the user
+    const cartResult = await ddb.send(
       new QueryCommand({
         TableName: process.env.CART_TABLE || "Cart",
         KeyConditionExpression: "userId = :u",
@@ -54,15 +56,49 @@ export const getUserCart = async (req, res) => {
       })
     );
 
+    const cartItems = cartResult.Items || [];
+
+    if (cartItems.length === 0) {
+      return res.status(200).json({
+        message: "Cart fetched successfully",
+        cart: [],
+      });
+    }
+
+    // 2️⃣ Get product details for all items in the cart using BatchGet
+    const productIds = cartItems.map((item) => item.productId);
+
+    const productsResult = await ddb.send(
+      new BatchGetCommand({
+        RequestItems: {
+          [process.env.PRODUCTS_TABLE || "Products"]: {
+            Keys: productIds.map((id) => ({ productId: id })),
+          },
+        },
+      })
+    );
+
+    const products = productsResult.Responses?.[process.env.PRODUCTS_TABLE || "Products"] || [];
+
+    // 3️⃣ Merge cart items with product details
+    const cartWithDetails = cartItems.map((item) => {
+      const product = products.find((p) => p.productId === item.productId);
+      return {
+        ...item,
+        product: product || null, // attach full product details
+      };
+    });
+
     res.status(200).json({
       message: "Cart fetched successfully",
-      cart: result.Items || [],
+      cart: cartWithDetails,
     });
   } catch (err) {
     console.error("Get cart error:", err);
     res.status(500).json({ message: "Error fetching cart", error: err.message });
   }
 };
+
 
 // --------------------- UPDATE SPECIFIC PRODUCT QUANTITY ---------------------
 export const updateCartItem = async (req, res) => {

@@ -10,10 +10,13 @@
   "dependencies": {
     "@aws-sdk/client-cognito-identity-provider": "^3.946.0",
     "@aws-sdk/client-dynamodb": "^3.946.0",
+    "@aws-sdk/client-ses": "^3.948.0",
+    "@aws-sdk/client-sns": "^3.948.0",
     "@aws-sdk/client-sts": "^3.946.0",
     "@aws-sdk/lib-dynamodb": "^3.946.0",
     "aws-sdk": "^2.1692.0",
     "axios": "^1.4.0",
+    "cors": "^2.8.5",
     "dotenv": "^16.6.1",
     "express": "^4.22.1",
     "jsonwebtoken": "^9.0.0",

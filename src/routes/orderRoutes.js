@@ -3,9 +3,14 @@ import {
   placeOrder,
   getUserOrders,
   deleteOrder,
-//   updateOrderStatus,
+   updateOrderStatus,
+getOrdersForMyStore,
+getStoreDashboardStats
 } from "../controllers/orderController.js";
 import isUser from "../middleware/authMiddleware.js";
+
+import verifyAdmin from "../middleware/verifyAdmin.js";
+
 
 const router = express.Router();
 
@@ -17,8 +22,11 @@ router.get("/",isUser, getUserOrders);
 
 router.delete("/:orderId", isUser, deleteOrder);
 
+router.get("/my-orders", verifyAdmin, getOrdersForMyStore);
 
-// Update order status
-// router.put("/:orderId",isUser, updateOrderStatus);
+router.patch("/:orderId/status", verifyAdmin, updateOrderStatus);
+
+router.get("/dashboard/", verifyAdmin,getStoreDashboardStats);
 
 export default router;
+

@@ -1,0 +1,109 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Generic Email Notification System (SNS -> SQS -> Lambda) - Learner Lab
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: email-notifications
+
+  LambdaFunctionName:
+    Type: String
+    Default: generic-email-lambda
+
+  ExistingLambdaRoleArn:
+    Type: String
+    Description: ARN of an EXISTING IAM role for Lambda
+
+Resources:
+
+  # ---------------- SNS Topic ----------------
+  EmailNotificationTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub "${ProjectName}-topic"
+
+  # ---------------- SQS Queue ----------------
+  EmailNotificationQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "${ProjectName}-queue"
+      VisibilityTimeout: 60
+
+  # ---- Allow SNS to send messages to SQS ----
+  EmailQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref EmailNotificationQueue
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: "*"
+            Action: sqs:SendMessage
+            Resource: !GetAtt EmailNotificationQueue.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !Ref EmailNotificationTopic
+
+  # -------- SNS → SQS Subscription --------
+  SnsToSqsSubscription:
+    Type: AWS::SNS::Subscription
+    DependsOn: EmailQueuePolicy
+    Properties:
+      TopicArn: !Ref EmailNotificationTopic
+      Protocol: sqs
+      Endpoint: !GetAtt EmailNotificationQueue.Arn
+      RawMessageDelivery: true
+
+  # ---------------- Lambda ----------------
+  GenericEmailLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Ref LambdaFunctionName
+      Runtime: nodejs18.x
+      Handler: index.handler
+      Role: !Ref ExistingLambdaRoleArn
+      Timeout: 30
+      Code:
+        ZipFile: |
+          exports.handler = async (event) => {
+            for (const record of event.Records) {
+              const message = JSON.parse(record.body);
+
+              const { toEmail, subject, body } = message;
+
+              if (!toEmail || !subject || !body) {
+                console.error("Invalid email message:", message);
+                continue;
+              }
+
+              // 🔕 Learner Lab: simulate email sending
+              console.log("📧 Sending Email (SIMULATED)");
+              console.log("To:", toEmail);
+              console.log("Subject:", subject);
+              console.log("Body:", body);
+            }
+          };
+
+  # -------- SQS → Lambda Trigger --------
+  LambdaEventSourceMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      BatchSize: 5
+      EventSourceArn: !GetAtt EmailNotificationQueue.Arn
+      FunctionName: !Ref GenericEmailLambda
+      Enabled: true
+
+Outputs:
+  SnsTopicArn:
+    Description: SNS Topic ARN (use in backend)
+    Value: !Ref EmailNotificationTopic
+
+  SqsQueueUrl:
+    Description: SQS Queue URL
+    Value: !Ref EmailNotificationQueue
+
+  LambdaName:
+    Description: Lambda function name
+    Value: !Ref GenericEmailLambda

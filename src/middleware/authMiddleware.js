@@ -23,6 +23,7 @@ export default function isUser(req, res, next){
     req.user = {
       userId: decoded.sub, // Cognito User Pool ID
       email: decoded.email,
+      role: decoded["custom:role"],
       groups: decoded["cognito:groups"] || [],
     };
 

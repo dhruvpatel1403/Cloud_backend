@@ -5,7 +5,8 @@ import {
   getProduct,
   updateProduct,
   deleteProduct,
-  getMyProducts,        // 🔥 NEW
+  getMyProducts, 
+  searchProducts,       // 🔥 NEW
    // 🔥 OPTIONAL: If you want category filtering
 } from "../controllers/productController.js";
 
@@ -29,6 +30,8 @@ router.delete("/:id", verifyAdmin, deleteProduct);
 
 // 🔥 NEW: Get all products created by the logged-in admin (store manager)
 router.get("/admin/mine", verifyAdmin, getMyProducts);
+
+router.get("/search", searchProducts);
 
 
 /**

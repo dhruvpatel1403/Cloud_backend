@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: DynamoDB setup for e-commerce app in Learner Lab (Products, Cart, Orders)
+Description: DynamoDB setup for e-commerce app in Learner Lab (Products, Cart, Orders, Users)
 
 Resources:
   ProductsTable:
@@ -57,6 +57,27 @@ Resources:
         - Key: Project
           Value: Ecommerce
 
+  UsersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: Users
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+        - AttributeName: role
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+        - AttributeName: role
+          KeyType: RANGE
+      Tags:
+        - Key: Environment
+          Value: LearnerLab
+        - Key: Project
+          Value: Ecommerce
+
 Outputs:
   ProductsTableName:
     Value: !Ref ProductsTable
@@ -72,3 +93,8 @@ Outputs:
     Value: !Ref OrdersTable
     Export:
       Name: OrdersTableName
+
+  UsersTableName:
+    Value: !Ref UsersTable
+    Export:
+      Name: UsersTableName
