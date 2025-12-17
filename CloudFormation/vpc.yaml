@@ -114,6 +114,7 @@ Resources:
           CidrIp: 0.0.0.0/0
 
   # ---------------------- LAUNCH TEMPLATE ---------------------
+    # ---------------------- LAUNCH TEMPLATE ---------------------
   LaunchTemplate:
     Type: AWS::EC2::LaunchTemplate
     Properties:
@@ -121,14 +122,19 @@ Resources:
         ImageId: ami-0e001c9271cf7f3b9   # Ubuntu 22.04
         InstanceType: !Ref InstanceType
         IamInstanceProfile:
-          Arn: arn:aws:iam::722439865933:instance-profile/Backend-BackendInstanceProfile-MXkmBpTvrn0K
+          Arn: arn:aws:iam::992382562069:instance-profile/LabInstanceProfile
         SecurityGroupIds:
           - !Ref InstanceSecurityGroup
         UserData:
           Fn::Base64: |
             #!/bin/bash
+            set -e
+            
+            # Update OS
             sudo apt update -y
-            sudo apt install -y nodejs npm
+        
+
+
 
   # ---------------------- TARGET GROUP ------------------------
   TargetGroup:
