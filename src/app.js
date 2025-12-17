@@ -17,7 +17,6 @@ const app = express();
 // -------------------
 // CORS FIX
 // -------------------
-import cors from "cors";
 
 app.use(
   cors({
