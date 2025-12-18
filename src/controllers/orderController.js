@@ -296,7 +296,83 @@ export const getOrdersForMyStore = async (req, res) => {
       })
       .filter(Boolean);
 
-    return res.status(200).json(filteredOrders);
+    if (filteredOrders.length === 0) {
+      return res.status(200).json([]);
+    }
+
+    // 5️⃣ Fetch user details using Query (since Users table has composite key: userId + role)
+    const ordersWithUserDetails = await Promise.all(
+      filteredOrders.map(async (order) => {
+        try {
+          // Query by userId (partition key) - will return user regardless of role
+          const userResult = await ddb.send(
+            new QueryCommand({
+              TableName: process.env.USERS_TABLE || "Users",
+              KeyConditionExpression: "userId = :userId",
+              ExpressionAttributeValues: {
+                ":userId": order.userId
+              },
+              ProjectionExpression: "userId, #userName, email, phone, address, city, #userState, zipCode, country, #userRole",
+              ExpressionAttributeNames: {
+                "#userName": "name",
+                "#userState": "state",
+                "#userRole": "role"
+              },
+              Limit: 1 // We only need one user record
+            })
+          );
+
+          const user = userResult.Items && userResult.Items.length > 0 ? userResult.Items[0] : null;
+
+          console.log(`User fetched for userId ${order.userId}:`, user);
+
+          return {
+            ...order,
+            user: user ? {
+              name: user.name || "N/A",
+              email: user.email || "N/A",
+              phone: user.phone || "N/A",
+              address: user.address || "N/A",
+              city: user.city || "N/A",
+              state: user.state || "N/A",
+              zipCode: user.zipCode || "N/A",
+              country: user.country || "N/A",
+              role: user.role || "N/A"
+            } : {
+              name: "Unknown User",
+              email: "N/A",
+              phone: "N/A",
+              address: "N/A",
+              city: "N/A",
+              state: "N/A",
+              zipCode: "N/A",
+              country: "N/A",
+              role: "N/A"
+            },
+          };
+        } catch (userErr) {
+          console.error(`Error fetching user ${order.userId}:`, userErr);
+          return {
+            ...order,
+            user: {
+              name: "Error Loading User",
+              email: "N/A",
+              phone: "N/A",
+              address: "N/A",
+              city: "N/A",
+              state: "N/A",
+              zipCode: "N/A",
+              country: "N/A",
+              role: "N/A"
+            },
+          };
+        }
+      })
+    );
+
+    console.log("Orders with user details:", JSON.stringify(ordersWithUserDetails, null, 2));
+
+    return res.status(200).json(ordersWithUserDetails);
   } catch (err) {
     console.error("Admin store orders error:", err);
     return res.status(500).json({
@@ -305,6 +381,8 @@ export const getOrdersForMyStore = async (req, res) => {
     });
   }
 };
+
+
 
 export const updateOrderStatus = async (req, res) => {
   const { orderId } = req.params;

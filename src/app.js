@@ -22,7 +22,8 @@ app.use(
   cors({
     origin: [
       "http://localhost:5173",
-      "http://cloudfrontend1403.s3-website-us-east-1.amazonaws.com"
+      "http://cloudfrontend1403.s3-website-us-east-1.amazonaws.com",
+      "http://frontend1403.s3-website-us-east-1.amazonaws.com"
     ],
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
